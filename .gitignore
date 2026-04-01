@@ -17,3 +17,6 @@ Session.vim
 # emacs
 \#*\#
 .#*
+
+# Vectimus governance receipts (local evidence)
+.vectimus/receipts/

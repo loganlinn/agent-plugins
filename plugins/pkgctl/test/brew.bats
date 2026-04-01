@@ -6,6 +6,8 @@ setup() {
 	PM_DIR="$PKGCTL_ROOT/pkg-managers/brew"
 	export PKGCTL_PM_DIR="$PM_DIR"
 	export PKGCTL_PM_SLUG="brew"
+	PKGCTL_PM_CMD="$(PKGCTL_PM_DIR="$PM_DIR" PKGCTL_PM_SLUG="brew" "$PM_DIR/bin/detect" 2>/dev/null)" || true
+	export PKGCTL_PM_CMD
 }
 
 @test "brew/detect: exits 0 when brew is available" {

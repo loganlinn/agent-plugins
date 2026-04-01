@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check a nix flake for available input updates.
+# Requires PKGCTL_NIX_FLAKE_REF to be set (path or URL to a flake).
+# Output: name\tcurrent\tlatest (one per line)
+
+nix_cmd="${PKGCTL_PM_CMD:?PKGCTL_PM_CMD must be set}"
+
+flake_ref="${PKGCTL_NIX_FLAKE_REF:?PKGCTL_NIX_FLAKE_REF must be set (path or URL to a flake)}"
+
+# nix flake update --dry-run shows what would change.
+# Output lines like:
+#   • Updated input 'nixpkgs':
+#       'github:NixOS/nixpkgs/abc1234' (2024-01-01)
+#     → 'github:NixOS/nixpkgs/def5678' (2024-02-01)
+dry_run="$("$nix_cmd" flake update --dry-run --flake "$flake_ref" 2>&1)" || exit 1
+
+# Parse updated inputs
+current_input=""
+current_rev=""
+while IFS= read -r line; do
+	if [[ "$line" =~ Updated\ input\ \'([^\']+)\' ]]; then
+		current_input="${BASH_REMATCH[1]}"
+		current_rev=""
+	elif [[ -n "$current_input" && -z "$current_rev" && "$line" =~ \'([^\']+)\' ]]; then
+		current_rev="${BASH_REMATCH[1]}"
+	elif [[ -n "$current_input" && -n "$current_rev" && "$line" =~ →.*\'([^\']+)\' ]]; then
+		latest_rev="${BASH_REMATCH[1]}"
+		# Extract short revs for display
+		current_short="${current_rev##*/}"
+		latest_short="${latest_rev##*/}"
+		printf '%s\t%s\t%s\n' "$current_input" "$current_short" "$latest_short"
+		current_input=""
+		current_rev=""
+	fi
+done <<<"$dry_run"

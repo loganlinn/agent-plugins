@@ -52,13 +52,17 @@ cmd_send() {
 
 	case "$method" in
 	osascript)
-		# Escape double quotes for AppleScript
-		local escaped_title="${title//\"/\\\"}"
-		local escaped_body="${body//\"/\\\"}"
+		# Pass values as arguments to avoid AppleScript injection
 		if [[ -n "$body" ]]; then
-			osascript -e "display notification \"$escaped_body\" with title \"$escaped_title\""
+			osascript -e 'on run argv' \
+				-e 'display notification (item 2 of argv) with title (item 1 of argv)' \
+				-e 'end run' \
+				-- "$title" "$body"
 		else
-			osascript -e "display notification \"$escaped_title\" with title \"pkgctl\""
+			osascript -e 'on run argv' \
+				-e 'display notification (item 1 of argv) with title "pkgctl"' \
+				-e 'end run' \
+				-- "$title"
 		fi
 		;;
 	notify-send)

@@ -4,7 +4,7 @@ set -euo pipefail
 # List user-installed Homebrew formulae with available updates.
 # Output: name\tcurrent\tlatest (one per line)
 
-brew_cmd="$(command -v brew || echo /opt/homebrew/bin/brew)"
+brew_cmd="${PKGCTL_PM_CMD:?PKGCTL_PM_CMD must be set}"
 
 # Get user-installed formulae (not dependencies)
 installed="$("$brew_cmd" list --installed-on-request --quiet -1)"

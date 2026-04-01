@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# List uv tool-installed packages with available updates.
+# Uses uv tool upgrade --dry-run to detect available updates.
+# Output: name\tcurrent\tlatest (one per line)
+
+uv_cmd="${PKGCTL_PM_CMD:?PKGCTL_PM_CMD must be set}"
+
+# uv tool list output format: "name v1.2.3" (with indented binary lines starting with -)
+installed="$("$uv_cmd" tool list 2>/dev/null)" || exit 1
+
+if [[ -z "$installed" ]]; then
+	exit 0
+fi
+
+while IFS= read -r line; do
+	# Match "name v1.2.3" lines (skip indented binary lines starting with -)
+	if [[ "$line" =~ ^([a-zA-Z0-9_-]+)\ v([0-9][^ ]*) ]]; then
+		name="${BASH_REMATCH[1]}"
+		current="${BASH_REMATCH[2]}"
+
+		# Try dry-run upgrade to detect if update is available
+		upgrade_output="$("$uv_cmd" tool upgrade "$name" --dry-run 2>&1)" || continue
+
+		# Parse the latest version from upgrade output
+		if [[ "$upgrade_output" =~ v([0-9][^ ]*) ]]; then
+			latest="${BASH_REMATCH[1]}"
+			if [[ "$current" != "$latest" ]]; then
+				printf '%s\t%s\t%s\n' "$name" "$current" "$latest"
+			fi
+		fi
+	fi
+done <<<"$installed"

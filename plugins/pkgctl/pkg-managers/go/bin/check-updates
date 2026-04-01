@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# List go-installed binaries with available updates.
+# Scans GOBIN/GOPATH/bin for binaries, extracts module info, queries Go proxy.
+# Output: name\tcurrent\tlatest (one per line)
+
+go_cmd="${PKGCTL_PM_CMD:?PKGCTL_PM_CMD must be set}"
+gobin="$("$go_cmd" env GOBIN)"
+if [[ -z "$gobin" ]]; then
+	gobin="$("$go_cmd" env GOPATH)/bin"
+fi
+
+if [[ ! -d "$gobin" ]]; then
+	exit 0
+fi
+
+for bin in "$gobin"/*; do
+	[[ -f "$bin" && -x "$bin" ]] || continue
+
+	# Extract module path and version from binary
+	info="$("$go_cmd" version -m "$bin" 2>/dev/null)" || continue
+	mod_path="$(sed -n 's/.*\bmod\b[[:space:]]*\([^[:space:]]*\).*/\1/p' <<<"$info")" || continue
+	current="$(sed -n 's/.*\bmod\b[[:space:]]*[^[:space:]]*[[:space:]]*\([^[:space:]]*\).*/\1/p' <<<"$info")" || continue
+
+	[[ -n "$mod_path" && -n "$current" ]] || continue
+
+	# Query Go module proxy for latest version
+	latest="$(curl -sf "https://proxy.golang.org/$mod_path/@latest" |
+		sed -n 's/.*"Version":"\([^"]*\)".*/\1/p')" || continue
+
+	if [[ -n "$latest" && "$current" != "$latest" ]]; then
+		name="${bin##*/}"
+		printf '%s\t%s\t%s\n' "$name" "$current" "$latest"
+	fi
+done

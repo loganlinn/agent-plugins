@@ -15,12 +15,12 @@ Each package manager lives in `pkg-managers/<slug>/` and conforms to the contrac
 | Slug | Tool | Status |
 |------|------|--------|
 | `brew` | Homebrew | Implemented |
-| `cargo` | cargo install | Planned |
-| `go` | go install | Planned |
-| `uv` | uv tool | Planned |
-| `npm` | npm -g | Planned |
-| `mise` | mise -g | Planned |
-| `nix` | nix flake | Planned |
+| `cargo` | cargo install | Implemented |
+| `go` | go install | Implemented |
+| `uv` | uv tool | Implemented |
+| `npm` | npm -g | Implemented |
+| `mise` | mise -g | Implemented |
+| `nix` | nix flake | Implemented (requires `PKGCTL_FLAKE_REF`) |
 
 ## Notifications
 

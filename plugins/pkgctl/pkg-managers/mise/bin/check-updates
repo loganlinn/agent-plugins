@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# List globally-installed mise tools with available updates.
+# Output: name\tcurrent\tlatest (one per line)
+
+mise_cmd="${PKGCTL_PM_CMD:?PKGCTL_PM_CMD must be set}"
+
+# mise outdated --global lists tools with updates available.
+# Output format: "tool  current  wanted  latest"
+# Header line starts with "Tool".
+outdated="$("$mise_cmd" outdated --global 2>/dev/null)" || true
+
+if [[ -z "$outdated" ]]; then
+	exit 0
+fi
+
+while IFS= read -r line; do
+	# Skip header
+	[[ "$line" =~ ^Tool ]] && continue
+	[[ -z "$line" ]] && continue
+
+	# Parse whitespace-separated fields: tool current wanted latest
+	read -r name current _wanted latest <<<"$line" || continue
+	[[ -n "$name" && -n "$current" && -n "$latest" ]] || continue
+
+	if [[ "$current" != "$latest" ]]; then
+		printf '%s\t%s\t%s\n' "$name" "$current" "$latest"
+	fi
+done <<<"$outdated"

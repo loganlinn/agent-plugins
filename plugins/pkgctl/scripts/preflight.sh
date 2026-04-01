@@ -2,24 +2,18 @@
 set -euo pipefail
 
 # Pre-flight checks for pkgctl.
-# Discovers available package managers and validates notification delivery.
+# Discovers available package managers.
 #
 # Usage: preflight.sh [pm1,pm2,...|*]
 #
-# Outputs one detected PM slug per line to stdout.
-# Exits non-zero if no PMs are actionable or notifications are broken.
+# Outputs one detected PM per line as: slug\tcommand-path
+# Exits non-zero if no PMs are actionable.
 
 PROG="${0##*/}"
 PKGCTL_ROOT="${PKGCTL_ROOT:?PKGCTL_ROOT must be set}"
 PM_DIR="$PKGCTL_ROOT/pkg-managers"
 
 requested="${1:-*}"
-
-# Validate notification channel
-if ! "$PKGCTL_ROOT/scripts/notify.sh" doctor >/dev/null; then
-	echo >&2 "$PROG: notification delivery check failed"
-	exit 1
-fi
 
 # Resolve PM list
 if [[ "$requested" == "*" ]]; then
@@ -45,12 +39,16 @@ for slug in "${slugs[@]}"; do
 		echo >&2 "$PROG: $slug: no detect script at $detect"
 		continue
 	fi
-	if PKGCTL_PM_DIR="$PM_DIR/$slug" PKGCTL_PM_SLUG="$slug" "$detect" >/dev/null 2>&1; then
-		echo "$slug"
-		found=$((found + 1))
-	else
+	cmd_path="$(PKGCTL_PM_DIR="$PM_DIR/$slug" PKGCTL_PM_SLUG="$slug" "$detect" 2>/dev/null)" || {
 		echo >&2 "$PROG: $slug: not detected, skipping"
+		continue
+	}
+	if [[ -z "$cmd_path" ]]; then
+		echo >&2 "$PROG: $slug: detect exited 0 but produced no path"
+		continue
 	fi
+	printf '%s\t%s\n' "$slug" "$cmd_path"
+	found=$((found + 1))
 done
 
 if [[ $found -eq 0 ]]; then

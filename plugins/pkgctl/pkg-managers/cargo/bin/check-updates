@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# List cargo-installed binaries with available updates.
+# Queries crates.io API for latest versions.
+# Output: name\tcurrent\tlatest (one per line)
+
+cargo_cmd="${PKGCTL_PM_CMD:?PKGCTL_PM_CMD must be set}"
+
+# cargo install --list output format:
+#   crate-name v1.2.3:
+#       binary-name
+installed="$("$cargo_cmd" install --list)" || exit 1
+
+# Extract crate names and versions
+while IFS= read -r line; do
+	# Match lines like "crate-name v1.2.3:" (top-level, no leading whitespace)
+	if [[ "$line" =~ ^([a-zA-Z0-9_-]+)\ v([0-9][^:]*): ]]; then
+		name="${BASH_REMATCH[1]}"
+		current="${BASH_REMATCH[2]}"
+
+		# Query crates.io for latest version
+		latest="$(curl -sf "https://crates.io/api/v1/crates/$name" \
+			-H 'User-Agent: pkgctl/0.1' |
+			sed -n 's/.*"newest_version":"\([^"]*\)".*/\1/p')" || continue
+
+		if [[ -n "$latest" && "$current" != "$latest" ]]; then
+			printf '%s\t%s\t%s\n' "$name" "$current" "$latest"
+		fi
+	fi
+done <<<"$installed"

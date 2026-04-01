@@ -8,5 +8,5 @@
   },
   "repository": "https://github.com/loganlinn/agent-plugins",
   "license": "MIT",
-  "keywords": ["package-manager", "updates", "homebrew", "cargo", "nix"]
+  "keywords": ["package-manager", "updates", "homebrew", "cargo", "go", "uv", "npm", "mise", "nix"]
 }

@@ -11,7 +11,7 @@ pkgctl monitors software installed through various package manager channels for 
 | [`pkg-managers/API.md`](pkg-managers/API.md) | **Package manager contract specification.** The authoritative reference for script interfaces, output schemas, environment variables, and rules. Read this first when adding or debugging a PM. |
 | `skills/check-updates/SKILL.md` | Orchestration instructions for Claude (haiku). |
 | `scripts/notify.sh` | Cross-platform desktop notification delivery (`send`, `doctor` subcommands). |
-| `scripts/preflight.sh` | PM discovery and notification validation. |
+| `scripts/preflight.sh` | PM discovery (outputs `slug\tcommand-path` per detected PM). |
 
 ## Architecture
 
@@ -90,9 +90,9 @@ Auto-detects the best available method; users override via `PKGCTL_NOTIFY_METHOD
 
 ### Pre-flight diagnostics
 
-`preflight.sh` runs before any PM check. It validates notification delivery (`notify.sh doctor`), resolves the PM list (`*` → detected PMs), and runs each PM's `bin/detect`. Only actionable PM slugs reach stdout.
+`preflight.sh` runs before any PM check. It resolves the PM list (`*` → detected PMs), runs each PM's `bin/detect`, and outputs `slug\tcommand-path` for each actionable PM. The command path is passed downstream as `PKGCTL_PM_CMD` so scripts never re-discover their executable.
 
-This ensures graceful failure: missing PMs are skipped silently; if none are found, the skill stops with a clear message.
+Notification validation (`notify.sh doctor`) happens later — just before sending — so a broken notification channel doesn't prevent checking for updates.
 
 ### Failure isolation
 
@@ -104,7 +104,7 @@ The `update` script is optional and never runs without explicit user confirmatio
 
 ### Environment variables over arguments
 
-Scripts receive context via environment variables (`PKGCTL_ROOT`, `PKGCTL_PM_DIR`, `PKGCTL_PM_SLUG`) rather than positional arguments. This keeps the calling convention uniform and extensible — new context can be added without changing existing scripts' argument parsing. See [`pkg-managers/API.md`](pkg-managers/API.md) for the full variable list.
+Scripts receive context via environment variables (`PKGCTL_ROOT`, `PKGCTL_PM_DIR`, `PKGCTL_PM_SLUG`, `PKGCTL_PM_CMD`) rather than positional arguments. This keeps the calling convention uniform and extensible — new context can be added without changing existing scripts' argument parsing. Per-PM variables follow the `PKGCTL_<SLUG>_*` naming convention (e.g., `PKGCTL_NIX_FLAKE_REF`). See [`pkg-managers/API.md`](pkg-managers/API.md) for the full variable list.
 
 ## Extending pkgctl
 
@@ -127,3 +127,22 @@ Tests use [bats](https://github.com/bats-core/bats-core) and live in `test/`. Ru
 - **Unit tests per script:** Each script has its own `.bats` file.
 - **Skip when PM absent:** Tests that require a specific PM skip gracefully on systems where it's not installed.
 - **Contract compliance:** Tests verify output format (tab-separated, correct field count) rather than specific package names.
+
+## Maintenance checklist
+
+When adding or removing a package manager, update all of the following:
+
+1. **`pkg-managers/<slug>/bin/detect` and `bin/check-updates`** — the implementation itself.
+2. **`test/<slug>.bats`** — bats tests for the new PM (follow the pattern in existing test files).
+3. **`skills/check-updates/SKILL.md` frontmatter** — add the PM slug to `description` and `argument-hint`.
+4. **`skills/check-updates/SKILL.md` body** — update the "Available Package Managers" list.
+5. **`README.md`** — update the package managers status table.
+6. **`.claude-plugin/plugin.json`** — add the PM slug to the `keywords` array.
+7. **Run `mise run test`** to verify all tests pass.
+8. **Run `shellcheck` and `shfmt`** on new scripts.
+
+When adding a new capability (e.g., `bin/update`, `bin/list-installed`):
+
+1. **`pkg-managers/API.md`** — document the new script's interface under "Optional Scripts".
+2. **`skills/check-updates/SKILL.md`** — update orchestration instructions if the skill should use it.
+3. **`test/`** — add contract compliance tests for the new script.

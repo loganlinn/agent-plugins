@@ -12,7 +12,8 @@ setup() {
 	fi
 	run "$PREFLIGHT" brew
 	[[ $status -eq 0 ]]
-	[[ "$output" == *"brew"* ]]
+	# Output is slug<TAB>command-path
+	[[ "$output" =~ ^brew$'\t'.+ ]]
 }
 
 @test "preflight: wildcard discovers at least one PM" {
