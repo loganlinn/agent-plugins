@@ -1,0 +1,16 @@
+{
+  "name": "agent-plugins",
+  "description": "Claude Code plugins by Logan Linn",
+  "owner": {
+    "name": "Logan Linn",
+    "url": "https://github.com/loganlinn"
+  },
+  "plugins": [
+    {
+      "name": "pkgctl",
+      "description": "Monitor installed software for available updates across package managers (brew, cargo, go, uv, npm, mise, nix)",
+      "source": "./plugins/pkgctl",
+      "category": "productivity"
+    }
+  ]
+}
