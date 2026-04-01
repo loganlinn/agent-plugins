@@ -1,0 +1,12 @@
+{
+  "name": "pkgctl",
+  "version": "0.1.0",
+  "description": "Monitor installed software for available updates across package managers",
+  "author": {
+    "name": "Logan Linn",
+    "url": "https://github.com/loganlinn"
+  },
+  "repository": "https://github.com/loganlinn/agent-plugins",
+  "license": "MIT",
+  "keywords": ["package-manager", "updates", "homebrew", "cargo", "nix"]
+}

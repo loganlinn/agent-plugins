@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# List user-installed Homebrew formulae with available updates.
+# Output: name\tcurrent\tlatest (one per line)
+
+brew_cmd="$(command -v brew || echo /opt/homebrew/bin/brew)"
+
+# Get user-installed formulae (not dependencies)
+installed="$("$brew_cmd" list --installed-on-request --quiet -1)"
+
+if [[ -z "$installed" ]]; then
+	exit 0
+fi
+
+# Get outdated subset with version info
+# --verbose output format: "name (current) != latest" or "name (current) < latest"
+outdated="$(xargs "$brew_cmd" outdated --formula --verbose <<<"$installed")" || true
+
+if [[ -z "$outdated" ]]; then
+	exit 0
+fi
+
+while IFS= read -r line; do
+	[[ -n "$line" ]] || continue
+	# Parse: "name (current) < latest" or "name (current) != latest"
+	name="${line%% (*}"
+	current="$(sed -n 's/.*(\(.*\)).*/\1/p' <<<"$line")"
+	latest="$(sed -n 's/.* [<!=]* \(.*\)/\1/p' <<<"$line")"
+	printf '%s\t%s\t%s\n' "$name" "${current:--}" "${latest:--}"
+done <<<"$outdated"

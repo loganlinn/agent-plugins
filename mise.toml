@@ -10,12 +10,13 @@ shellcheck = "latest"
 shfmt = "latest"
 actionlint = "latest"
 ripgrep = "latest"
+bats = "latest"
 
 [tasks.build]
 run = "echo TODO"
 
 [tasks.test]
-run = "echo TODO"
+run = "bats --recursive plugins/"
 
 [tasks.lint]
 run = "hk check"
